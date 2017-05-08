@@ -1,4 +1,4 @@
-package pkg;
+//package pkg;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -8,12 +8,28 @@ import java.util.Scanner;
 /**
  * Created by Sarahwang on 4/24/17.
  * modified by Lifen Yan on 5/6/17
+ * modified by Chunwen Xiong on 5/7/17
  */
 
 public class ThreadClass {
 	public static void main(String[] args) throws InterruptedException, IOException {
 		// int maxRange = 20;
 		// int capacity = 5;
+		int num_consumers = 2; // Specify on cmd line; default is two. 
+
+		if (args.length > 0) {
+			try {
+	            // Parse the string argument into an integer value.
+	            num_consumers = Integer.parseInt(args[0]);
+	        }
+	        catch (NumberFormatException nfe) {
+	            // The first argument isn't a valid integer.  Print
+	            // an error message, then exit with an error code.
+	            System.out.println("The Command-Line Argument must be an integer.");
+	            System.exit(1);
+	        }
+		}
+		
 
 		// read maxRange and capacity from console, within range 1 ~ 50000
 		int maxRange = 0; // the max integer producer can reach
@@ -23,12 +39,15 @@ public class ThreadClass {
 			System.out.printf("Specify the max range within 1 ~ 50000: ");
 			maxRange = in.nextInt();
 		} while (maxRange <= 0 || maxRange > 50000);
+
 		do {
 			System.out.printf("Specify the buffer size within 1 ~ 50000: ");
 			capacity = in.nextInt();
 		} while (capacity <= 0 || capacity > 50000);
+
 		in.close();
-		System.out.println("***maxRange: " + maxRange + ", capacity: " + capacity + "***");
+
+		System.out.println("*** maxRange: " + maxRange + ", capacity: " + capacity + ", num of consumer: " + num_consumers + " ***");
 
 		// PC is object of a class that has both produce() and consume() methods
 		final PC pc = new PC(maxRange, capacity);
@@ -46,50 +65,32 @@ public class ThreadClass {
 		});
 
 		// Create consumer thread
-		Thread t1 = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					pc.consume(1);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
+		Thread[] consumer_threads = new Thread[num_consumers];
+		for (int i = 0; i < num_consumers; i++) {
+			final int nob = i + 1;
+			consumer_threads[i] = new Thread(new Runnable() {
+				@Override
+				public void run() {
+					try {
+						pc.consume(nob);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
 				}
-			}
-		});
-
-		Thread t2 = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					pc.consume(2);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		});
-
-		Thread t3 = new Thread(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					pc.consume(3);
-				} catch (InterruptedException e) {
-					e.printStackTrace();
-				}
-			}
-		});
-
-		// Start both threads
+			});
+		}
+		
+		// start threads
 		t0.start();
-		t1.start();
-		t2.start();
-		t3.start();
+		for (int i = 0; i < num_consumers; i++) {
+			consumer_threads[i].start();
+		}
 
-		// t1 finishes before t2
+		// Wait for them to finish.
 		t0.join();
-		t1.join();
-		t2.join();
-		t3.join();
+		for (int i = 0; i < num_consumers; i++) {
+			consumer_threads[i].join();
+		}
 
 		System.out.println("finished");
 	}
